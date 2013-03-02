@@ -148,6 +148,7 @@ class ElasticSearchPlugin(Plugin):
             logger.debug('Indexing JSON %s', str(data.keys()))
 
             try:
-                self.es_conn.index(data)
+                self.es_conn.index(doc=data, index=self.es_index, \
+                                       doc_type='event')
             except Exception, e:
                 logger.warning('Error indexing event: %s', e)
