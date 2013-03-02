@@ -119,6 +119,8 @@ class ElasticSearchPlugin(Plugin):
             logger.debug('Returning: is_new? %s, configured? %s')
             return
 
+        logger.debug('Working on event %s, group %s', event, group)
+
         if not self.is_setup:
             logger.debug('Setupping on event %s', event)
             self.setup(group.project)
