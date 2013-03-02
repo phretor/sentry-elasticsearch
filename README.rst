@@ -1,4 +1,4 @@
-sentry-Elasticsearch
+Sentry ElasticSearch
 ====================
 
 An extension for Sentry that indexes each event by its custom tags.
