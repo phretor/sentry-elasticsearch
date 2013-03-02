@@ -19,12 +19,12 @@ install_requires = [
 ]
 
 setup(
-    name='sentry-elastisearch',
+    name='sentry-elasticsearch',
     version='0.1.0',
     author='Federico Maggi',
     author_email='federico.maggi@gmail.com',
-    url='http://github.com/phretor/sentry-elastisearch',
-    description='A Sentry plugin that performs elastisearch indexing.',
+    url='http://github.com/phretor/sentry-elasticsearch',
+    description='A Sentry plugin that performs elasticsearch indexing.',
     long_description=__doc__,
     license='BSD',
     package_dir={'': 'src'},

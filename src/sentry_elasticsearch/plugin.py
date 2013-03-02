@@ -3,7 +3,7 @@
 sentry_elasticsearch.plugin
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This module performs elastisearch indexing of Sentry event tags, which
+This module performs elasticsearch indexing of Sentry event tags, which
 are compressed as GZipDictField and, for this reason, slow to perform
 searches on.
 
@@ -13,32 +13,42 @@ queries on tag fields.
 :copyright: (c) 2013 Federico Maggi
 :license: BSD
 """
+import sys
+import logging
+
 from django import forms
 
 from sentry.plugins import Plugin
 from sentry.utils.safe import safe_execute
+from django.utils.translation import ugettext_lazy as _
+
+import sentry_elasticsearch
 
 from pyes import ES
 
-import sentry_elasticsearch
+logger = logging.getLogger('sentry.plugins.elasticsearch')
+
+PYES_DOC = '<a href="http://pyes.readthedocs.org/">the PyES doc</a>'
 
 class ElasticSearchOptionsForm(forms.Form):
     #TODO: validate
     es_conn_string = forms.CharField(
+        label=_('ElasticSearch Connection String'),
         initial='127.0.0.1:9500',
-        help_text='ElasticSearch connection string '\
-            '(e.g., localhost:9500).')
+        help_text=_('(e.g., localhost:9500). See %s for valid '\
+		'connection strings and port options' % PYES_DOC))
 
     es_index_name = forms.CharField(
+	label=_('ElasticSearch Index Name'),
         required=False,
-        help_text='ElasticSearch index name. If left blank, the index will'\
-            'be sentry-<project_slug>')
+        help_text='If left blank, the index will'\
+            'be sentry-&lt;project_slug&gt;')
 
 
 class ElasticSearchPlugin(Plugin):
-    title = 'ElasticSearch'
+    title = _('ElasticSearch')
     slug = 'elasticsearch'
-    description = 'ElastiSearch indexing of Sentry event tags'
+    description = _('ElastiSearch indexing of Sentry event tags')
     version = sentry_elasticsearch.VERSION
 
     author = 'Federico Maggi'
@@ -56,23 +66,50 @@ class ElasticSearchPlugin(Plugin):
     ES_INDEX_NAME_TEMPLATE = 'sentry-%(project_name)s'
 
     def __init__(self):
-        es_conn = None
-        es_index = None
-        is_setup = False
-
-        self.setup(group.project)
-
-    def setup(self, project):
-        self.set_index(project)
-        self.set_connection(project)
-        self.is_setup = True
+	logger.debug('New instance of ElasticSearchPlugin created')
+        self.es_conn = None
+        self.es_index = None
+        self.is_setup = False
 
     def is_configured(self, project, **kwargs):
         return all(self.get_option(k, project) for k in (
                 'es_conn_string',
                 'es_index_name'))
 
+    def set_index(self, project):
+	logger.debug('Setting up the index')
+        if self.es_index is None:
+	    _es_index = self.get_option('es_index_name', project)
+	    self.es_index = self.ES_INDEX_NAME_TEMPLATE % {
+	        'project_name': project.slug }
+	    logger.debug('Index is now %s', self.es_index)
+
+    def set_connection(self, project):
+	logger.debug('Setting up connection')
+        if self.es_conn is None:
+            try:
+		cs = self.get_option('es_conn_string', project)
+		logger.debug('Creating connection to %s', cs)
+                self.es_conn = ES(cs)
+            except Exception, e:
+		logger.warning('Error setting up the connection: %s', e)
+                return
+	    logger.debug('Error creating successfully')
+        if not self.es_conn.exists_index(self.es_index):
+	    logger.debug('Creating index "%s"', self.es_index)
+            try:
+                self.es_conn.create_index(self.es_index)
+            except Exception, e:
+		logger.warning('Error creating the index "%s": %s', self.es_index, e)
+
+    def setup(self, project):
+	logger.debug('Setting up plugin for project "%s"', project.slug)
+        self.set_index(project)
+        self.set_connection(project)
+        self.is_setup = True
+
     def post_process(self, group, event, is_new, is_sample, **kwargs):
+	logger.debug('Post processing event %s', event)
         if not is_new or not self.is_configured(group.project):
             return
 
@@ -85,42 +122,21 @@ class ElasticSearchPlugin(Plugin):
         if self.es_conn is None:
             return
 
+	logger.debug('Indexing event %s', event.pk)
+
         data = None
         try:
             data = event.data.get('extra', None)
         except Exception, e:
-            pass
+            logger.warning('Could not retrieve extra data: %s', e)
 
         if data is not None:
             data.update({'id': event.id})
 
+	    logger.debug('Indexing %s', str(data.keys()))
+
             try:
                 self.es_conn.index(data)
             except Exception, e:
-                pass
+		logger.warning('Error indexing event: %s', e)
 
-    def set_index(self, project):
-        if self.es_index is None:
-            _es_index = None
-            try:
-                _es_index = self.get_option('es_index_name', project.slug)
-            except Exception, e:
-                pass
-
-            if isinstance(_es_index, basestring):
-                self.es_index = _es_index
-            else:
-                self.es_index = self.ES_INDEX_NAME_TEMPLATE % {
-                    'project_name': project.slug }
-
-    def set_connection(self, project):
-        if self.es_conn is None:
-            try:
-                self.es_conn = ES(self.get_option('es_conn_string'), project)
-            except Exception, e:
-                return
-        if not self.es_conn.exists_index(self.es_index):
-            try:
-                self.es_conn.create_index(self.es_index)
-            except Exception, e:
-                pass
