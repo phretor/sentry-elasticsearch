@@ -126,6 +126,7 @@ class ElasticSearchPlugin(Plugin):
             logger.debug('Setupping on event %s', event)
             self.setup(group.project)
 
+        logger.debug('Launching indexing %s', event)
         self.index(event)
 
     def index(self, event):
@@ -148,7 +149,7 @@ class ElasticSearchPlugin(Plugin):
             logger.debug('Indexing JSON %s', str(data.keys()))
 
             try:
-                self.es_conn.index(doc=data, index=self.es_index, \
-                                       doc_type='event')
+                self.es_conn.index(
+                    doc=data, index=self.es_index, doc_type='event')
             except Exception, e:
                 logger.warning('Error indexing event: %s', e)
