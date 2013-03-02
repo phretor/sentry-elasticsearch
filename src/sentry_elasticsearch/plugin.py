@@ -80,8 +80,11 @@ class ElasticSearchPlugin(Plugin):
         logger.debug('Setting up the index')
         if self.es_index is None:
            _es_index = self.get_option('es_index_name', project)
-           self.es_index = self.ES_INDEX_NAME_TEMPLATE % {
-               'project_name': project.slug }
+           if not isinstance(_es_index, basestring):
+               self.es_index = self.ES_INDEX_NAME_TEMPLATE % {
+                   'project_name': project.slug }
+           else:
+               self.es_index = _es_index
            logger.debug('Index is now %s', self.es_index)
 
     def set_connection(self, project):
@@ -112,23 +115,23 @@ class ElasticSearchPlugin(Plugin):
     def post_process(self, group, event, is_new, is_sample, **kwargs):
         logger.debug('Post processing event %s, group %s', event, group)
         configured = self.is_configured(group.project)
-        if not configured and not is_new:
+        if not configured or not is_new:
             logger.debug('Returning: is_new? %s, configured? %s')
             return
 
         if not self.is_setup:
-            logger.debug('Setupping event')
+            logger.debug('Setupping on event %s', event)
             self.setup(group.project)
 
         self.index(event)
 
     def index(self, event):
+        logger.debug('Indexing event %s', event)
+
         if self.es_conn is None:
             logger.warning('No connection to ElasticSearch server %s', \
                                self.es_conn_string)
             return
-
-        logger.debug('Indexing event %s', event.pk)
 
         data = None
         try:
@@ -139,7 +142,7 @@ class ElasticSearchPlugin(Plugin):
         if data is not None:
             data.update({'id': event.id})
 
-            logger.debug('Indexing %s', str(data.keys()))
+            logger.debug('Indexing JSON %s', str(data.keys()))
 
             try:
                 self.es_conn.index(data)
