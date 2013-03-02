@@ -35,7 +35,7 @@ class ElasticSearchOptionsForm(forms.Form):
             'be sentry-<project_slug>')
 
 
-class ElasticSearch(Plugin):
+class ElasticSearchPlugin(Plugin):
     title = 'ElasticSearch'
     slug = 'elasticsearch'
     description = 'ElastiSearch indexing of Sentry event tags'
