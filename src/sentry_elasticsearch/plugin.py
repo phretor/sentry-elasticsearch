@@ -36,10 +36,10 @@ class ElasticSearchOptionsForm(forms.Form):
         label=_('ElasticSearch Connection String'),
         initial='127.0.0.1:9500',
         help_text=_('(e.g., localhost:9500). See %s for valid '\
-		'connection strings and port options' % PYES_DOC))
+                        'connection strings and port options' % PYES_DOC))
 
     es_index_name = forms.CharField(
-	label=_('ElasticSearch Index Name'),
+        label=_('ElasticSearch Index Name'),
         required=False,
         help_text='If left blank, the index will'\
             'be sentry-&lt;project_slug&gt;')
@@ -66,7 +66,7 @@ class ElasticSearchPlugin(Plugin):
     ES_INDEX_NAME_TEMPLATE = 'sentry-%(project_name)s'
 
     def __init__(self):
-	logger.debug('New instance of ElasticSearchPlugin created')
+        logger.debug('New instance of ElasticSearchPlugin created')
         self.es_conn = None
         self.es_index = None
         self.is_setup = False
@@ -77,39 +77,40 @@ class ElasticSearchPlugin(Plugin):
                 'es_index_name'))
 
     def set_index(self, project):
-	logger.debug('Setting up the index')
+        logger.debug('Setting up the index')
         if self.es_index is None:
-	    _es_index = self.get_option('es_index_name', project)
-	    self.es_index = self.ES_INDEX_NAME_TEMPLATE % {
-	        'project_name': project.slug }
-	    logger.debug('Index is now %s', self.es_index)
+           _es_index = self.get_option('es_index_name', project)
+           self.es_index = self.ES_INDEX_NAME_TEMPLATE % {
+               'project_name': project.slug }
+           logger.debug('Index is now %s', self.es_index)
 
     def set_connection(self, project):
-	logger.debug('Setting up connection')
+        logger.debug('Setting up connection')
         if self.es_conn is None:
             try:
-		cs = self.get_option('es_conn_string', project)
-		logger.debug('Creating connection to %s', cs)
+                cs = self.get_option('es_conn_string', project)
+                logger.debug('Creating connection to %s', cs)
                 self.es_conn = ES(cs)
             except Exception, e:
-		logger.warning('Error setting up the connection: %s', e)
+                logger.warning('Error setting up the connection: %s', e)
                 return
-	    logger.debug('Error creating successfully')
+        logger.debug('Connection created successfully')
         if not self.es_conn.exists_index(self.es_index):
-	    logger.debug('Creating index "%s"', self.es_index)
+            logger.debug('Creating index "%s"', self.es_index)
             try:
                 self.es_conn.create_index(self.es_index)
             except Exception, e:
-		logger.warning('Error creating the index "%s": %s', self.es_index, e)
+                logger.warning('Error creating the index "%s": %s',\
+                                   self.es_index, e)
 
     def setup(self, project):
-	logger.debug('Setting up plugin for project "%s"', project.slug)
+        logger.debug('Setting up plugin for project "%s"', project.slug)
         self.set_index(project)
         self.set_connection(project)
         self.is_setup = True
 
     def post_process(self, group, event, is_new, is_sample, **kwargs):
-	logger.debug('Post processing event %s', event)
+        logger.debug('Post processing event %s, group %s', event, group)
         if not is_new or not self.is_configured(group.project):
             return
 
@@ -122,7 +123,7 @@ class ElasticSearchPlugin(Plugin):
         if self.es_conn is None:
             return
 
-	logger.debug('Indexing event %s', event.pk)
+        logger.debug('Indexing event %s', event.pk)
 
         data = None
         try:
@@ -133,10 +134,9 @@ class ElasticSearchPlugin(Plugin):
         if data is not None:
             data.update({'id': event.id})
 
-	    logger.debug('Indexing %s', str(data.keys()))
+            logger.debug('Indexing %s', str(data.keys()))
 
             try:
                 self.es_conn.index(data)
             except Exception, e:
-		logger.warning('Error indexing event: %s', e)
-
+                logger.warning('Error indexing event: %s', e)
