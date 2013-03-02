@@ -41,8 +41,7 @@ class ElasticSearchOptionsForm(forms.Form):
     es_index_name = forms.CharField(
         label=_('ElasticSearch Index Name'),
         required=False,
-        help_text='If left blank, the index will'\
-            'be sentry-&lt;project_slug&gt;')
+        help_text='Must exist')
 
 
 class ElasticSearchPlugin(Plugin):
