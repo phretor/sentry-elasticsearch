@@ -112,7 +112,7 @@ class ElasticSearchPlugin(Plugin):
     def post_process(self, group, event, is_new, is_sample, **kwargs):
         logger.debug('Post processing event %s, group %s', event, group)
         configured = self.is_configured(group.project)
-        if not is_new or not configured:
+        if not configured:
             logger.debug('Returning: is_new? %s, configured? %s')
             return
 
