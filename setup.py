@@ -31,8 +31,6 @@ setup(
     packages=find_packages('src'),
     zip_safe=False,
     install_requires=install_requires,
-    tests_require=tests_require,
-    extras_require={'test': tests_require},
     include_package_data=True,
     entry_points={
        'sentry.apps': [

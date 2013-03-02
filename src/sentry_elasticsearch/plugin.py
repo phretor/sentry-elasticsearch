@@ -25,7 +25,7 @@ import sentry_elasticsearch
 class ElasticSearchOptionsForm(forms.Form):
     #TODO: validate
     es_conn_string = forms.CharField(
-        initial='127.0.0.1:9500'
+        initial='127.0.0.1:9500',
         help_text='ElasticSearch connection string '\
             '(e.g., localhost:9500).')
 
