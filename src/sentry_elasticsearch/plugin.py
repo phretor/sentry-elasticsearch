@@ -112,17 +112,20 @@ class ElasticSearchPlugin(Plugin):
     def post_process(self, group, event, is_new, is_sample, **kwargs):
         logger.debug('Post processing event %s, group %s', event, group)
         configured = self.is_configured(group.project)
-        if not configured:
+        if not configured and not is_new:
             logger.debug('Returning: is_new? %s, configured? %s')
             return
 
         if not self.is_setup:
+            logger.debug('Setupping event')
             self.setup(group.project)
 
         self.index(event)
 
     def index(self, event):
         if self.es_conn is None:
+            logger.warning('No connection to ElasticSearch server %s', \
+                               self.es_conn_string)
             return
 
         logger.debug('Indexing event %s', event.pk)
